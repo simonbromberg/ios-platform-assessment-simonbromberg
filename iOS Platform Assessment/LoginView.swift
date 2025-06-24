@@ -3,8 +3,8 @@ import SwiftUI
 
 struct LoginView: View {
   
-  @State private var accountToken = ""
-  @State private var apiKey = ""
+  @State private var accountToken = CredentialStore.accountToken ?? ""
+  @State private var apiKey = CredentialStore.apiKey ?? ""
   @State private var showError = false
   @State private var isLoggedIn = false
   @State private var isLoading = false
@@ -39,6 +39,10 @@ struct LoginView: View {
         } else {
           Button(action: {
             if validateLogin() {
+              // TODO: Should be hitting actual API
+              CredentialStore.accountToken = accountToken
+              CredentialStore.apiKey = apiKey
+              
               isLoading = true
               showError = false
               // Simulate a delay

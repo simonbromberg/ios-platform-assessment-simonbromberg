@@ -2,45 +2,34 @@ import Foundation
 import SwiftUI
 
 struct VehicleList: View {
+  @Observable
+  class ViewModel {
+    var vehicles: [Vehicle] = []
+    
+    private let dataProvider: DataProvider
+    
+    init(dataProvider: DataProvider) {
+      self.dataProvider = dataProvider
+    }
+    
+    func fetchVehicles() async throws {
+      vehicles = try await dataProvider.getVehicles()
+    }
+  }
+  
+  @Environment(ViewModel.self) private var viewModel
+  
   @State private var isLoading = true
   @State private var searchText = ""
   @State private var selectedVehicle: Vehicle?
   @State private var lastUpdated = Date()
-  var vehicleFuelEntries: [Int: [FuelEntry]] = [:]
-  
-  init(isLoading: Bool = true, searchText: String = "", selectedVehicle: Vehicle? = nil, lastUpdated: Date = Date()) {
-    self.isLoading = isLoading
-    self.searchText = searchText
-    self.selectedVehicle = selectedVehicle
-    self.lastUpdated = lastUpdated
-    self.vehicleFuelEntries = mapFuelEntriesToVehicles()
-  }
-
-  private func mapFuelEntriesToVehicles() -> [Int: [FuelEntry]] {
-    var vehicleFuelEntries: [Int: [FuelEntry]] = [:]
-
-    // Initialize empty arrays for each vehicle
-    for vehicle in SampleData.vehicleList {
-      vehicleFuelEntries[vehicle.id] = []
-    }
-
-    // Map fuel entries to their corresponding vehicles
-    for fuelEntry in SampleData.fuelEntries {
-      if let vehicleId = fuelEntry.vehicleId {
-        vehicleFuelEntries[vehicleId]?.append(fuelEntry)
-      }
-    }
-
-    return vehicleFuelEntries
-  }
 
   var filteredVehicles: [Vehicle] {
-
     if searchText.isEmpty {
-      return SampleData.vehicleList
+      return viewModel.vehicles
     } else {
       let searchTerms = searchText.lowercased().split(separator: " ")
-      return SampleData.vehicleList.filter { vehicle in
+      return viewModel.vehicles.filter { vehicle in
         searchTerms.allSatisfy { term in
           vehicle.customName.lowercased().contains(term) ||
           vehicle.make.lowercased().contains(term) ||
@@ -57,9 +46,14 @@ struct VehicleList: View {
         ProgressView()
           .progressViewStyle(CircularProgressViewStyle())
           .onAppear {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+            Task {
+              do {
+                try await viewModel.fetchVehicles()
+              } catch {
+                // TODO: error handling
+                print(error)
+              }
               isLoading = false
-              lastUpdated = Date()
             }
           }
       } else {
@@ -70,14 +64,10 @@ struct VehicleList: View {
             .onChange(of: searchText) { _ in
               lastUpdated = Date()
             }
-
           List {
             ForEach(filteredVehicles, id: \.id) { vehicle in
               NavigationLink(destination: VehicleView(vehicle: vehicle)) {
                 VehicleRow(vehicle: vehicle)
-                  .onAppear {
-                    selectedVehicle = vehicle
-                  }
               }
               .accessibilityIdentifier(AccessibilityIdentifiers.VehicleList.vehicleListItem(id: vehicle.id))
               .background(selectedVehicle?.id == vehicle.id ? Color.gray.opacity(0.1) : Color.clear)
@@ -117,7 +107,7 @@ struct VehicleRow: View {
         HStack {
           Circle()
             .frame(width: 10, height: 10)
-            .foregroundColor(vehicle.status == "Active" ? .green : .red)
+            .foregroundColor(vehicle.status == "Active" ? .green : .red) // TODO: use status color from API
           Text(vehicle.status)
           Text("\u{2022}")
           Text(vehicle.location)
@@ -133,5 +123,10 @@ struct VehicleRow: View {
 #Preview {
   NavigationView {
     VehicleList()
+      .environment(
+        VehicleList.ViewModel(
+          dataProvider: SampleDataProvider()
+        )
+      )
   }
 }
