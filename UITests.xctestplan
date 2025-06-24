@@ -1,0 +1,24 @@
+{
+  "configurations" : [
+    {
+      "id" : "E8BED382-5ADA-46FA-B318-2556C5C5A000",
+      "name" : "Configuration 1",
+      "options" : {
+
+      }
+    }
+  ],
+  "defaultOptions" : {
+
+  },
+  "testTargets" : [
+    {
+      "target" : {
+        "containerPath" : "container:iOS Platform Assessment.xcodeproj",
+        "identifier" : "EFC1F9A82DAF1C47003FF9A9",
+        "name" : "iOS Platform AssessmentUITests"
+      }
+    }
+  ],
+  "version" : 1
+}

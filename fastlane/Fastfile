@@ -13,16 +13,47 @@
 # Uncomment the line if you want fastlane to automatically update itself
 # update_fastlane
 
+RUN_ID = is_ci ? ENV["RUN_ID"] : "local"
+
+PROJECT_PATH = "iOS Platform Assessment.xcodeproj"
+TEST_DEVICE = "iPhone 16 Pro (18.4)"
+
+ROOT_PATH = File.expand_path("../", File.dirname(__FILE__))
+CONFIG_PATH = File.join(ROOT_PATH, "Config")
+BUILD_PATH = File.join(ROOT_PATH, "build")
+REPORTS_PATH = File.join(BUILD_PATH, "reports")
+RUN_PATH = File.join(REPORTS_PATH, RUN_ID || "local")
+
 default_platform(:ios)
 
 platform :ios do
   desc "A custom fastlane lane to run the unit tests"
   lane :unit_tests do
-    # add actions here: https://docs.fastlane.tools/actions
+    run_tests(
+      buildlog_path: RUN_PATH,
+      clean: true,  
+      code_coverage: true,
+      device: TEST_DEVICE,
+      ensure_devices_found: true,
+      derived_data_path: RUN_PATH,
+      cloned_source_packages_path: "SourcePackages",
+      project: PROJECT_PATH,
+      testplan: "UnitTests"
+    )
   end
 
   desc "A custom fastlane lane to run the UI tests"
   lane :ui_tests do
-    # add actions here: https://docs.fastlane.tools/actions
+    run_tests(
+      buildlog_path: RUN_PATH,
+      clean: true,  
+      code_coverage: true,
+      device: TEST_DEVICE,
+      ensure_devices_found: true,
+      derived_data_path: RUN_PATH,
+      cloned_source_packages_path: "SourcePackages",
+      project: PROJECT_PATH,
+      testplan: "UITests"
+    )
   end
 end
