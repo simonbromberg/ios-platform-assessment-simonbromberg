@@ -46,8 +46,8 @@ struct NetworkHelper: DataProvider {
     }
     
     var request = URLRequest(url: vehiclesURL)
-    request.addValue(accountToken, forHTTPHeaderField: "Account-Token") // FIXME: get token from login
-    request.addValue("Token \(apiKey)", forHTTPHeaderField: "Authorization") // FIXME: get API key from login
+    request.addValue(accountToken, forHTTPHeaderField: "Account-Token")
+    request.addValue("Token \(apiKey)", forHTTPHeaderField: "Authorization")
     
     
     let (data, _) = try await URLSession.shared.data(for: request)
