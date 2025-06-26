@@ -10,6 +10,13 @@ import Foundation
 /// Vehicles
 
 struct VehiclesResponse: Decodable {
+  // MARK - Pagination
+  let startCursor: String
+  let nextCursor: String?
+  let perPage: Int
+  let estimatedRemainingCount: Int
+  
+  // MARK: - Vehicles
   let records: [Vehicle]
   
   /// Workaround for `year` being a number when a string is expected, remove when fixed

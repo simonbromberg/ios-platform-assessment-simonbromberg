@@ -5,20 +5,36 @@ struct VehicleList: View {
   @Observable
   class ViewModel {
     var vehicles: [Vehicle] = []
-    
+    private var nextPage: Paging?
+
     private let dataProvider: DataProvider
-    
+
     init(dataProvider: DataProvider) {
       self.dataProvider = dataProvider
     }
-    
-    func fetchVehicles() async throws {
-      vehicles = try await dataProvider.getVehicles()
+
+    func fetchVehicles(shouldLoadNextPage: Bool = false) async throws {
+      if shouldLoadNextPage {
+        let (newPageOfVehicles, paging) = try await dataProvider.getVehicles(startCursor: nextPage?.nextCursor)
+        nextPage = paging
+        vehicles += newPageOfVehicles
+      } else {
+        (vehicles, nextPage) = try await dataProvider.getVehicles(startCursor: nil)
+      }
+    }
+
+    var hasMorePages: Bool {
+      nextPage?.estimatedRemainingCount ?? 0 > vehicles.count
+    }
+
+    func reset() {
+      nextPage = nil
+      vehicles.removeAll(keepingCapacity: true)
     }
   }
-  
+
   @Environment(ViewModel.self) private var viewModel
-  
+
   @State private var isLoading = true
   @State private var searchText = ""
   @State private var selectedVehicle: Vehicle?
@@ -41,42 +57,54 @@ struct VehicleList: View {
   }
 
   var body: some View {
-    Group {
-      if isLoading {
-        ProgressView()
-          .progressViewStyle(CircularProgressViewStyle())
-          .onAppear {
-            Task {
-              do {
-                try await viewModel.fetchVehicles()
-              } catch {
-                // TODO: error handling
-                print(error)
-              }
-              isLoading = false
-            }
+    VStack {
+      SearchBar(text: $searchText)
+        .padding()
+        .background(Color(UIColor.secondarySystemGroupedBackground))
+        .onChange(of: searchText) {
+          lastUpdated = Date()
+        }
+      List {
+        if isLoading {
+          ProgressView()
+            .progressViewStyle(CircularProgressViewStyle())
+            .frame(maxWidth: .infinity)
+        }
+        ForEach(filteredVehicles, id: \.id) { vehicle in
+          NavigationLink(destination: VehicleView(vehicle: vehicle)) {
+            VehicleRow(vehicle: vehicle)
           }
-      } else {
-        VStack {
-          SearchBar(text: $searchText)
-            .padding()
-            .background(Color(UIColor.secondarySystemGroupedBackground))
-            .onChange(of: searchText) { _ in
-              lastUpdated = Date()
-            }
-          List {
-            ForEach(filteredVehicles, id: \.id) { vehicle in
-              NavigationLink(destination: VehicleView(vehicle: vehicle)) {
-                VehicleRow(vehicle: vehicle)
-              }
-              .accessibilityIdentifier(AccessibilityIdentifiers.VehicleList.vehicleListItem(id: vehicle.id))
-              .background(selectedVehicle?.id == vehicle.id ? Color.gray.opacity(0.1) : Color.clear)
-            }
+          .accessibilityIdentifier(AccessibilityIdentifiers.VehicleList.vehicleListItem(id: vehicle.id))
+          .background(selectedVehicle?.id == vehicle.id ? Color.gray.opacity(0.1) : Color.clear)
+        }
+        if viewModel.hasMorePages {
+          Button("Load more") {
+            loadData(shouldLoadNextPage: true)
           }
-          .navigationTitle("Vehicles")
-          .navigationBarTitleDisplayMode(.inline)
         }
       }
+      .refreshable {
+        viewModel.reset()
+        loadData()
+      }
+      .navigationTitle("Vehicles")
+      .navigationBarTitleDisplayMode(.inline)
+    }
+    .onAppear {
+      loadData()
+    }
+  }
+
+  func loadData(shouldLoadNextPage: Bool = false) {
+    isLoading = true
+    Task {
+      do {
+        try await viewModel.fetchVehicles(shouldLoadNextPage: shouldLoadNextPage)
+      } catch {
+        // TODO: error handling
+        print(error)
+      }
+      isLoading = false
     }
   }
 }
