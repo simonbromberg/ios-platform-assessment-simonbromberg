@@ -1,6 +1,6 @@
 import Foundation
 
-struct Vehicle {
+struct Vehicle: Equatable {
   let id: Int
   let name: String
   let model: String

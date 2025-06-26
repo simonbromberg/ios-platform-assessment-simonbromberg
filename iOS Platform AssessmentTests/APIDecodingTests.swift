@@ -27,7 +27,10 @@ struct APIDecodingTests {
   @Test func vehicles() async throws {
     let decoder = DataDecoder()
     let data = try loadJSONFromFile(named: "Vehicles")
-    let vehicles = try decoder.decodeVehicles(data: data)
+    let (vehicles, paging) = try decoder.decodeVehicles(data: data)
+    
+    #expect(paging.nextCursor == "eyJpZCI6Mzk5MjMyMX0=")
+    #expect(paging.estimatedRemainingCount == 51)
 
     #expect(vehicles.count == 50)
     #expect(vehicles.first?.name == "2024 GMC Sierra 1500 SLT")
