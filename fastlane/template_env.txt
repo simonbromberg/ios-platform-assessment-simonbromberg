@@ -1,0 +1,1 @@
+# shared credentials across environments (e.g. GitHub access token, Slack keys, issue tracker etc.)
