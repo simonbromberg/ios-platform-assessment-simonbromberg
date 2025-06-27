@@ -35,6 +35,8 @@ struct VehicleList: View {
 
   @Environment(ViewModel.self) private var viewModel
 
+  @State private var pageLoadStart: Date = .now
+
   @State private var isLoading = true
   @State private var searchText = ""
   @State private var selectedVehicle: Vehicle?
@@ -91,6 +93,8 @@ struct VehicleList: View {
       .navigationBarTitleDisplayMode(.inline)
     }
     .onAppear {
+      MetricsLogger.shared.logPageLoad(page: "VehicleList", start: pageLoadStart)
+      MetricsLogger.shared.save()
       loadData()
     }
   }

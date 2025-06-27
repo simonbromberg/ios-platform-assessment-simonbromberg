@@ -31,9 +31,22 @@
 		EFC1F9A92DAF1C47003FF9A9 /* iOS Platform AssessmentUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "iOS Platform AssessmentUITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		D4DA0E4A2E0F04D600207616 /* Exceptions for "iOS Platform Assessment" folder in "iOS Platform AssessmentUITests" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				MetricsLogger.swift,
+			);
+			target = EFC1F9A82DAF1C47003FF9A9 /* iOS Platform AssessmentUITests */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		EFC1F9912DAF1C46003FF9A9 /* iOS Platform Assessment */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				D4DA0E4A2E0F04D600207616 /* Exceptions for "iOS Platform Assessment" folder in "iOS Platform AssessmentUITests" target */,
+			);
 			path = "iOS Platform Assessment";
 			sourceTree = "<group>";
 		};
