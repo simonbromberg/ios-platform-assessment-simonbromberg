@@ -13,6 +13,26 @@
 # Uncomment the line if you want fastlane to automatically update itself
 # update_fastlane
 
+def fetch(options, key, default_value = '')
+  value = options.fetch(key, default_value)
+  return value unless value.to_s.empty?
+
+  default_value
+end
+
+# place .env, .env.DEV, .env.PROD etc files in fastlane folder with credentials for each app environment
+# env files can be shared across team via e.g. 1Password for quicker setup (should not be committed to repo)
+# environments and credentials can also be specified in CI (e.g. GitHub Actions) and passed to ENV in workflow
+
+ENVIRONMENT = fetch(ENV, 'ENVIRONMENT', '')
+APP_STORE_APPLE_ID = fetch(ENV, 'APP_STORE_APPLE_ID', '')
+ASC_AUTH_KEY_ID = fetch(ENV, 'ASC_AUTH_KEY_ID')
+ASC_AUTH_ISSUER_ID = fetch(ENV, 'ASC_AUTH_ISSUER_ID')
+ASC_AUTH_KEY = fetch(ENV, 'ASC_AUTH_KEY') # base64 encoded key from App Store Connect
+APP_IDENTIFIER = fetch(ENV, 'APP_IDENTIFIER')
+
+FASTLANE_SLACK_URL = fetch(ENV, 'FASTLANE_SLACK_URL')
+
 RUN_ID = is_ci ? ENV["RUN_ID"] : "local"
 
 PROJECT_PATH = "iOS Platform Assessment.xcodeproj"
@@ -56,4 +76,119 @@ platform :ios do
       testplan: "UITests"
     )
   end
+
+  desc 'Build and upload signed ipa to App Store Connect'
+  desc 'Specify environment with --env DEV, --env PROD…'
+  lane :app_store do
+    api_key = app_store_api_key
+
+    # build/version bumping
+
+    new_build_number = (latest_testflight_build_number(api_key: api_key, app_identifier: app_identifier) + 1).to_s
+    increment_build_number_in_xcodeproj( # uses Fastlane plugin fastlane-plugin-versioning
+      build_number: new_build_number,
+      xcodeproj: PROJECT_PATH,
+    )
+
+    # in real project, can use Spaceship to check for latest released versions to ensure upload does not fail because the version is too low 
+    # can also set up lane to accept the bump type (major, minor, patch, none) as an input
+    new_version = increment_version_number_in_xcodeproj(
+      xcodeproj: IOS_PROJECT_PATH,
+      bump_type: 'patch'
+    )
+    
+    full_version_identifier = "#{new_version}.#{new_build_number}"
+
+    puts "New version identifier: #{full_version_identifier}"
+
+    # signing
+
+    setup_match(api_key)
+
+    # building app
+
+    build_app(
+      project: PROJECT_PATH
+    )
+
+    ## changelog for demonstrative purposes
+    commit_ids = ['1', '2'] # placeholder; use git log to get current and previous version bump commit ids
+    changelog = changelog_from_git_commits(
+      between: commit_ids
+      pretty: '%s',
+      merge_commit_filtering: 'exclude_merges'
+    )
+
+    # git commit version bump changes (and/or anything else needed to be committed)
+
+    git_message = "#{ENVIRONMENT} Version Bump #{full_version_identifier} [skip ci]"
+
+    git_commit(path: PROJECT_PATH, message: message, skip_git_hooks: true)
+
+    # upload app
+     upload_to_testflight(
+      apple_id: APP_STORE_APPLE_ID,
+      skip_waiting_for_build_processing: false, # depending on CI costs etc.
+      api_key: api_key,
+      changelog: changelog,
+    )
+    ## can also submit for beta app review, distribute to TestFlight groups
+    ## and/or, could submit for release review using 'upload_to_app_store' (https://docs.fastlane.tools/actions/upload_to_app_store/), 
+    ## or release manually when ready — depends on team's desired workflow
+
+    # Push git commit
+    
+    ## if using git tags…
+    add_git_tag(
+      tag: "v#{full_version_identifier}"
+    )
+
+    push_to_git_remote(
+      tags: true
+    )
+
+    # integrations
+    ## e.g. update ticket statuses in issue tracker for QA, create a release record etc.
+  
+
+    # notifications, e.g. slack (get webhook URL)
+    slack(
+      slack_url: FASTLANE_SLACK_URL,
+      pretext: "#{ENVIRONMENT} Build & upload success (#{full_version_identifier}!",
+      message: release_notes,
+      success: true,
+      fail_on_error: false,
+      link_names: true
+    )
+  end
+
+  def app_store_api_key
+    app_store_connect_api_key(
+      key_id: ASC_AUTH_KEY_ID,
+      issuer_id: ASC_AUTH_ISSUER_ID,
+      key_content: ASC_AUTH_KEY,
+      is_key_content_base64: true
+    )
+  end
+
+  def setup_match(api_key)
+    # https://docs.fastlane.tools/actions/match/
+    # set up git repo, Google Cloud, or S3 to store signing credentials and automatically refresh them as needed
+    # store identifiers in Matchfile, secret credentials in env (MATCH_PASSWORD etc), depends which storage option one is using
+    is_on_ci = is_ci
+
+    setup_ci if is_on_ci
+
+    match(
+      type: 'development',
+      readonly: is_on_ci,
+      api_key: api_key
+    )
+
+    match(
+      type: 'appstore',
+      readonly: is_on_ci,
+      api_key: api_key
+    )
+    end
 end
