@@ -42,6 +42,8 @@ struct NetworkHelper: DataProvider {
   let baseURL: String
 
   func getVehicles(startCursor: String?) async throws -> (results: [Vehicle], paging: Paging) {
+    let startDate: Date = .now
+
     guard let vehiclesURL = Endpoint.vehicles.url(base: baseURL),
           var components = URLComponents(url: vehiclesURL, resolvingAgainstBaseURL: true) else {
       throw NetworkError.invalidURL
@@ -73,7 +75,12 @@ struct NetworkHelper: DataProvider {
 
     let decoder = DataDecoder()
 
-    return try decoder.decodeVehicles(data: data)
+    let vehicles = try decoder.decodeVehicles(data: data)
+
+    MetricsLogger.shared.logAPICall(endpoint: "vehicles", start: startDate)
+    MetricsLogger.shared.save()
+
+    return vehicles
   }
 
   enum NetworkError: Error {
