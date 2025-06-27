@@ -8,7 +8,13 @@
 import XCTest
 
 final class VehiclesListMetricsTest: UITest {
-  func test_AppLaunchLoadVehiclesMetrics() throws {
+  func test_AppLaunch() {
+    measure(metrics: [XCTApplicationLaunchMetric()]) {
+        XCUIApplication().launch()
+    }
+  }
+
+  func test_LoadVehiclesMetrics() throws {
     LoginScreenActions()
       .iLogin(accountToken: Utils.defaultAccountToken, apiKey: Utils.defaultApiKey)
     HomeScreenActions()
@@ -18,9 +24,7 @@ final class VehiclesListMetricsTest: UITest {
 
     let label = app.staticTexts["Sierra 1500"] // placeholder, ensure API call finishes before test ends
 
-    // Wait up to 10 seconds for the text to appear
-    let exists = label.waitForExistence(timeout: 10)
-
+    let exists = label.waitForExistence(timeout: 2)
     XCTAssertTrue(exists, "Expected text did not appear")
 
     // Simplified implementation, real reporting system would be more elaborate / note this will only work for tests run on a simulator
