@@ -2,45 +2,52 @@ import Foundation
 import SwiftUI
 
 struct VehicleList: View {
+  @Observable
+  class ViewModel {
+    var vehicles: [Vehicle] = []
+    private var nextPage: Paging?
+
+    private let dataProvider: DataProvider
+
+    init(dataProvider: DataProvider) {
+      self.dataProvider = dataProvider
+    }
+
+    func fetchVehicles(shouldLoadNextPage: Bool = false) async throws {
+      if shouldLoadNextPage {
+        let (newPageOfVehicles, paging) = try await dataProvider.getVehicles(startCursor: nextPage?.nextCursor)
+        nextPage = paging
+        vehicles += newPageOfVehicles
+      } else {
+        (vehicles, nextPage) = try await dataProvider.getVehicles(startCursor: nil)
+      }
+    }
+
+    var hasMorePages: Bool {
+      nextPage?.estimatedRemainingCount ?? 0 > vehicles.count
+    }
+
+    func reset() {
+      nextPage = nil
+      vehicles.removeAll(keepingCapacity: true)
+    }
+  }
+
+  @Environment(ViewModel.self) private var viewModel
+
+  @State private var pageLoadStart: Date = .now
+
   @State private var isLoading = true
   @State private var searchText = ""
   @State private var selectedVehicle: Vehicle?
   @State private var lastUpdated = Date()
-  var vehicleFuelEntries: [Int: [FuelEntry]] = [:]
-  
-  init(isLoading: Bool = true, searchText: String = "", selectedVehicle: Vehicle? = nil, lastUpdated: Date = Date()) {
-    self.isLoading = isLoading
-    self.searchText = searchText
-    self.selectedVehicle = selectedVehicle
-    self.lastUpdated = lastUpdated
-    self.vehicleFuelEntries = mapFuelEntriesToVehicles()
-  }
-
-  private func mapFuelEntriesToVehicles() -> [Int: [FuelEntry]] {
-    var vehicleFuelEntries: [Int: [FuelEntry]] = [:]
-
-    // Initialize empty arrays for each vehicle
-    for vehicle in SampleData.vehicleList {
-      vehicleFuelEntries[vehicle.id] = []
-    }
-
-    // Map fuel entries to their corresponding vehicles
-    for fuelEntry in SampleData.fuelEntries {
-      if let vehicleId = fuelEntry.vehicleId {
-        vehicleFuelEntries[vehicleId]?.append(fuelEntry)
-      }
-    }
-
-    return vehicleFuelEntries
-  }
 
   var filteredVehicles: [Vehicle] {
-
     if searchText.isEmpty {
-      return SampleData.vehicleList
+      return viewModel.vehicles
     } else {
       let searchTerms = searchText.lowercased().split(separator: " ")
-      return SampleData.vehicleList.filter { vehicle in
+      return viewModel.vehicles.filter { vehicle in
         searchTerms.allSatisfy { term in
           vehicle.customName.lowercased().contains(term) ||
           vehicle.make.lowercased().contains(term) ||
@@ -52,41 +59,56 @@ struct VehicleList: View {
   }
 
   var body: some View {
-    Group {
-      if isLoading {
-        ProgressView()
-          .progressViewStyle(CircularProgressViewStyle())
-          .onAppear {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
-              isLoading = false
-              lastUpdated = Date()
-            }
+    VStack {
+      SearchBar(text: $searchText)
+        .padding()
+        .background(Color(UIColor.secondarySystemGroupedBackground))
+        .onChange(of: searchText) {
+          lastUpdated = Date()
+        }
+      List {
+        if isLoading {
+          ProgressView()
+            .progressViewStyle(CircularProgressViewStyle())
+            .frame(maxWidth: .infinity)
+        }
+        ForEach(filteredVehicles, id: \.id) { vehicle in
+          NavigationLink(destination: VehicleView(vehicle: vehicle)) {
+            VehicleRow(vehicle: vehicle)
           }
-      } else {
-        VStack {
-          SearchBar(text: $searchText)
-            .padding()
-            .background(Color(UIColor.secondarySystemGroupedBackground))
-            .onChange(of: searchText) { _ in
-              lastUpdated = Date()
-            }
-
-          List {
-            ForEach(filteredVehicles, id: \.id) { vehicle in
-              NavigationLink(destination: VehicleView(vehicle: vehicle)) {
-                VehicleRow(vehicle: vehicle)
-                  .onAppear {
-                    selectedVehicle = vehicle
-                  }
-              }
-              .accessibilityIdentifier(AccessibilityIdentifiers.VehicleList.vehicleListItem(id: vehicle.id))
-              .background(selectedVehicle?.id == vehicle.id ? Color.gray.opacity(0.1) : Color.clear)
-            }
+          .accessibilityIdentifier(AccessibilityIdentifiers.VehicleList.vehicleListItem(id: vehicle.id))
+          .background(selectedVehicle?.id == vehicle.id ? Color.gray.opacity(0.1) : Color.clear)
+        }
+        if viewModel.hasMorePages {
+          Button("Load more") {
+            loadData(shouldLoadNextPage: true)
           }
-          .navigationTitle("Vehicles")
-          .navigationBarTitleDisplayMode(.inline)
         }
       }
+      .refreshable {
+        viewModel.reset()
+        loadData()
+      }
+      .navigationTitle("Vehicles")
+      .navigationBarTitleDisplayMode(.inline)
+    }
+    .onAppear {
+      MetricsLogger.shared.logPageLoad(page: "VehicleList", start: pageLoadStart)
+      MetricsLogger.shared.save()
+      loadData()
+    }
+  }
+
+  func loadData(shouldLoadNextPage: Bool = false) {
+    isLoading = true
+    Task {
+      do {
+        try await viewModel.fetchVehicles(shouldLoadNextPage: shouldLoadNextPage)
+      } catch {
+        // TODO: error handling
+        print(error)
+      }
+      isLoading = false
     }
   }
 }
@@ -117,7 +139,7 @@ struct VehicleRow: View {
         HStack {
           Circle()
             .frame(width: 10, height: 10)
-            .foregroundColor(vehicle.status == "Active" ? .green : .red)
+            .foregroundColor(vehicle.status == "Active" ? .green : .red) // TODO: use status color from API
           Text(vehicle.status)
           Text("\u{2022}")
           Text(vehicle.location)
@@ -133,5 +155,10 @@ struct VehicleRow: View {
 #Preview {
   NavigationView {
     VehicleList()
+      .environment(
+        VehicleList.ViewModel(
+          dataProvider: SampleDataProvider()
+        )
+      )
   }
 }

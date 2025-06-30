@@ -29,7 +29,7 @@ struct VehicleView: View {
 
   var body: some View {
     List {
-      Text(vehicle.customName)
+      Text(vehicle.customName.isEmpty ? vehicle.name : vehicle.customName)
 
       Section {
         ForEach(vehicleOptions, id: \.name) { option in

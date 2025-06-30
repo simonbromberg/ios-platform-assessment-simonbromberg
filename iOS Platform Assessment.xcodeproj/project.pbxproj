@@ -24,14 +24,29 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		D4A416712E08C8A000A13B2A /* UnitTests.xctestplan */ = {isa = PBXFileReference; lastKnownFileType = text; path = UnitTests.xctestplan; sourceTree = "<group>"; };
+		D4A416722E08C8AF00A13B2A /* UITests.xctestplan */ = {isa = PBXFileReference; lastKnownFileType = text; path = UITests.xctestplan; sourceTree = "<group>"; };
 		EFC1F98F2DAF1C46003FF9A9 /* iOS Platform Assessment.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "iOS Platform Assessment.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		EFC1F99F2DAF1C47003FF9A9 /* iOS Platform AssessmentTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "iOS Platform AssessmentTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 		EFC1F9A92DAF1C47003FF9A9 /* iOS Platform AssessmentUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "iOS Platform AssessmentUITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		D4DA0E4A2E0F04D600207616 /* Exceptions for "iOS Platform Assessment" folder in "iOS Platform AssessmentUITests" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				MetricsLogger.swift,
+			);
+			target = EFC1F9A82DAF1C47003FF9A9 /* iOS Platform AssessmentUITests */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		EFC1F9912DAF1C46003FF9A9 /* iOS Platform Assessment */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				D4DA0E4A2E0F04D600207616 /* Exceptions for "iOS Platform Assessment" folder in "iOS Platform AssessmentUITests" target */,
+			);
 			path = "iOS Platform Assessment";
 			sourceTree = "<group>";
 		};
@@ -75,6 +90,8 @@
 		EFC1F9862DAF1C46003FF9A9 = {
 			isa = PBXGroup;
 			children = (
+				D4A416722E08C8AF00A13B2A /* UITests.xctestplan */,
+				D4A416712E08C8A000A13B2A /* UnitTests.xctestplan */,
 				EFC1F9912DAF1C46003FF9A9 /* iOS Platform Assessment */,
 				EFC1F9A22DAF1C47003FF9A9 /* iOS Platform AssessmentTests */,
 				EFC1F9AC2DAF1C47003FF9A9 /* iOS Platform AssessmentUITests */,

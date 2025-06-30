@@ -7,6 +7,7 @@ struct BrowseItem {
 }
 
 struct BrowseView: View {
+  @State private var vehicleListViewModel = VehicleList.ViewModel(dataProvider: NetworkHelper())
 
   let assets: [BrowseItem] = [
     BrowseItem(name: "Equipment", iconName: "hammer"),
@@ -80,7 +81,10 @@ struct BrowseView: View {
   func navigationDestination(for item: BrowseItem) -> some View {
 
     if item.name == "Vehicles" {
-      AnyView(VehicleList())
+      AnyView(
+        VehicleList()
+          .environment(vehicleListViewModel)
+      )
     } else {
       AnyView(Text(item.name))
     }
